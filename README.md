@@ -13,6 +13,26 @@
 - **Expandable Layout**: Flexible panel sizes with a draggable resizer.
 - **GitHub Pages Ready**: Optimized for static hosting with a modern build process.
 
+## 🚀 Deployment (GitHub Pages)
+
+This project is configured for automated deployment via **GitHub Actions**.
+
+### 1. Enable GitHub Pages
+1. Go to your repository on GitHub.
+2. Navigate to **Settings > Pages**.
+3. Under **Build and deployment > Source**, select **GitHub Actions**.
+
+### 2. Push to Main
+Once GitHub Actions is enabled, every push to the `main` branch will automatically build and deploy the application.
+
+### 3. Manual Build (Optional)
+If you want to build locally and deploy manually:
+```bash
+npm install
+npm run build
+```
+Upload the contents of the `dist/` folder to your hosting provider.
+
 ## State Machine Configuration
 
 The simulator uses a simple JSON format. Example:
