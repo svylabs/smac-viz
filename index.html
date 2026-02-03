@@ -18,33 +18,102 @@
 
 <body>
     <div class="visualizer-container">
-        <!-- Left: JSON Editor -->
-        <aside class="panel editor-panel" id="editor-panel">
-            <div class="panel-header">
-                <span class="subtitle">Configuration</span>
-                <h2>JSON Editor</h2>
-                <div style="display: flex; gap: 8px; margin-top: 12px;">
-                    <button id="btn-apply-json" class="btn-mini"
-                        style="flex: 1; background: var(--success); border: none; color: white;">Apply Changes</button>
-                    <button id="btn-reset-json" class="btn-mini" style="flex: 1;">Reset to Default</button>
+        <!-- Unified Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1 style="font-family: 'Outfit', sans-serif; font-size: 1.25rem;">smac-viz</h1>
+                    <button id="sidebar-close" class="btn-mini mobile-only" onclick="toggleSidebar()">✕</button>
                 </div>
             </div>
-            <div id="editor-container"
-                style="flex-grow: 1; border-radius: 12px; overflow: hidden; border: 1px solid var(--border);"></div>
+
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" onclick="switchMainTab('code')">Code</button>
+                <button class="tab-btn" onclick="switchMainTab('sim')">Simulator</button>
+                <button class="tab-btn" onclick="switchMainTab('hist')">History</button>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Code Editor Tab -->
+                <div id="tab-code" class="tab-pane active">
+                    <div class="pane-header">
+                        <span class="subtitle">Configuration</span>
+                        <h2>JSON Editor</h2>
+                        <div style="display: flex; gap: 8px; margin-top: 12px;">
+                            <button id="btn-apply-json" class="btn-mini"
+                                style="flex: 1; background: var(--success); border: none; color: white;">Apply</button>
+                            <button id="btn-reset-json" class="btn-mini" style="flex: 1;">Reset</button>
+                        </div>
+                    </div>
+                    <div id="editor-container"
+                        style="height: calc(100vh - 250px); border-radius: 12px; overflow: hidden; border: 1px solid var(--border);">
+                    </div>
+                </div>
+
+                <!-- Simulation & Context Tab -->
+                <div id="tab-sim" class="tab-pane">
+                    <div class="pane-header">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <span class="subtitle">Current State</span>
+                                <h2 id="current-state-label">Loading...</h2>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="engine.undo()" class="btn-mini" title="Undo Last Step">↩️</button>
+                                <button id="btn-replay" class="btn-mini" title="Replay Sequence">▶️</button>
+                            </div>
+                        </div>
+                        <p id="current-state-desc"
+                            style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;"></p>
+                    </div>
+
+                    <div id="controls-root">
+                        <!-- Controls will be injected here -->
+                    </div>
+
+                    <div id="replay-controls"
+                        style="display: none; margin-top: 20px; padding: 16px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); border-radius: 12px; text-align: center;">
+                        <p style="font-size: 0.75rem; color: var(--success); margin-bottom: 12px; font-weight: 600;">
+                            REPLAY MODE ACTIVE</p>
+                        <button id="btn-replay-next" class="btn-action"
+                            style="background: var(--success); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                            <span class="label">Next Step</span>
+                            <span id="replay-remaining" class="target">3 steps remaining</span>
+                        </button>
+                        <button onclick="exitReplay()"
+                            style="background: transparent; border: none; color: var(--text-muted); font-size: 0.7rem; cursor: pointer; margin-top: 12px; text-decoration: underline;">Exit
+                            Replay</button>
+                    </div>
+
+                    <!-- Context Viewer (Merged) -->
+                    <div style="margin-top: 32px;">
+                        <span class="subtitle">Data Context</span>
+                        <div id="state-json" class="state-viewer" style="margin-top: 12px;">{}</div>
+                    </div>
+
+                    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border);">
+                        <button onclick="engine.reset()" class="btn-option"
+                            style="width: 100%; padding: 12px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 12px; cursor: pointer;">Reset
+                            Simulation</button>
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div id="tab-hist" class="tab-pane">
+                    <div class="pane-header">
+                        <span class="subtitle">Simulation Log</span>
+                        <h2>Event History</h2>
+                    </div>
+                    <div id="history-log" class="history-list"></div>
+                </div>
+            </div>
         </aside>
 
         <div id="resizer" class="resizer"></div>
 
-        <!-- Center: Visual Diagram -->
-        <main class="panel mermaid-panel">
-            <div class="panel-header"
-                style="position: absolute; top: 20px; left: 24px; pointer-events: none; z-index: 10;">
-                <span class="subtitle">System Visualization</span>
-                <h1
-                    style="font-family: 'Outfit', sans-serif; font-size: 1.5rem; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
-                    smac-viz</h1>
-            </div>
-
+        <!-- Main Content: Diagram -->
+        <main class="main-content">
+            <button id="sidebar-toggle" class="sidebar-toggle-btn mobile-only" onclick="toggleSidebar()">☰</button>
             <div class="zoom-controls">
                 <button onclick="panZoom?.zoomIn()" class="btn-zoom" title="Zoom In">➕</button>
                 <button onclick="panZoom?.zoomOut()" class="btn-zoom" title="Zoom Out">➖</button>
@@ -54,7 +123,7 @@
             <div id="mermaid-root"></div>
 
             <div id="error-overlay"
-                style="display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; flex-direction: column; justify-content: center; align-items: center; padding: 40px; text-align: center;">
+                style="display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; flex-direction: column; justify-content: center; align-items: center; padding: 40px; text-align: center;">
                 <div style="font-size: 3rem; margin-bottom: 20px;">⚠️</div>
                 <h2 style="color: #ef4444; margin-bottom: 12px;">Configuration Error</h2>
                 <p id="error-message"
@@ -63,60 +132,6 @@
                     style="margin-top: 24px; width: auto; padding: 12px 24px;">Close Overlay</button>
             </div>
         </main>
-
-        <!-- Right: Controls & Context -->
-        <aside class="panel">
-            <div class="panel-header">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <span class="subtitle">Simulation Controls</span>
-                        <h2 id="current-state-label">Loading...</h2>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button onclick="engine.undo()" class="btn-mini" title="Undo Last Step">↩️</button>
-                        <button id="btn-replay" class="btn-mini" title="Replay Sequence">▶️</button>
-                    </div>
-                </div>
-                <p id="current-state-desc" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;"></p>
-            </div>
-
-            <div id="controls-root">
-                <!-- Controls will be injected here -->
-            </div>
-
-            <div id="replay-controls"
-                style="display: none; margin-top: 20px; padding: 16px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); border-radius: 12px; text-align: center;">
-                <p style="font-size: 0.75rem; color: var(--success); margin-bottom: 12px; font-weight: 600;">REPLAY MODE
-                    ACTIVE</p>
-                <button id="btn-replay-next" class="btn-action"
-                    style="background: var(--success); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
-                    <span class="label">Next Step in Sequence</span>
-                    <span id="replay-remaining" class="target">3 steps remaining</span>
-                </button>
-                <button onclick="exitReplay()"
-                    style="background: transparent; border: none; color: var(--text-muted); font-size: 0.7rem; cursor: pointer; margin-top: 12px; text-decoration: underline;">Exit
-                    Replay</button>
-            </div>
-
-            <div class="tab-bar" style="margin-top: 24px;">
-                <button class="tab-btn active" onclick="switchTab('context')" id="tab-btn-context">Context</button>
-                <button class="tab-btn" onclick="switchTab('history')" id="tab-btn-history">History</button>
-            </div>
-
-            <div id="panel-context">
-                <div id="state-json" class="state-viewer">{}</div>
-            </div>
-
-            <div id="panel-history" class="hidden">
-                <div id="history-log" class="history-list"></div>
-            </div>
-
-            <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border);">
-                <button onclick="engine.reset()" class="btn-option"
-                    style="width: 100%; padding: 12px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 12px; cursor: pointer;">Reset
-                    Simulation</button>
-            </div>
-        </aside>
     </div>
 
     <script type="module">
@@ -147,6 +162,8 @@
                 fontSize: 13,
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                wrappingStrategy: 'advanced',
                 roundedSelection: false,
                 padding: { top: 10 }
             });
@@ -156,11 +173,11 @@
 
         // Resizer Logic
         const resizer = document.getElementById('resizer');
-        const editorPanel = document.getElementById('editor-panel');
+        const sidebar = document.getElementById('sidebar');
         let isResizing = false;
 
         resizer.addEventListener('mousedown', (e) => {
-            if (window.innerWidth <= 1024) return; // Disable resizer on mobile/tablet
+            if (window.innerWidth <= 1024) return;
             isResizing = true;
             resizer.classList.add('active');
             document.body.style.cursor = 'col-resize';
@@ -169,7 +186,7 @@
 
         document.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
-            const newWidth = Math.max(200, Math.min(window.innerWidth - 450, e.clientX));
+            const newWidth = Math.max(250, Math.min(window.innerWidth - 100, e.clientX));
             document.documentElement.style.setProperty('--editor-width', `${newWidth}px`);
             if (editor) editor.layout();
         });
@@ -181,6 +198,35 @@
             document.body.style.cursor = 'default';
             document.body.style.userSelect = 'auto';
         });
+
+        // Mobile Sidebar Toggle
+        window.toggleSidebar = function () {
+            sidebar.classList.toggle('active');
+        };
+
+        // Tab Switching
+        window.switchMainTab = function (tabId) {
+            // Hide all panes
+            const panes = document.querySelectorAll('.tab-pane');
+            panes.forEach(p => p.classList.remove('active'));
+
+            // Deactivate all buttons
+            const btns = document.querySelectorAll('.sidebar-tabs .tab-btn');
+            btns.forEach(b => b.classList.remove('active'));
+
+            // Show selected
+            const activePane = document.getElementById(`tab-${tabId}`);
+            activePane.classList.add('active');
+
+            // Find and activate the clicked button
+            const activeBtn = Array.from(btns).find(b => b.textContent.toLowerCase().includes(tabId));
+            if (activeBtn) activeBtn.classList.add('active');
+
+            // Force editor layout if switching to code tab
+            if (tabId === 'code' && editor) {
+                setTimeout(() => editor.layout(), 10);
+            }
+        };
 
         async function loadInitialConfig() {
             try {
@@ -257,14 +303,6 @@
                 return null;
             }
         }
-
-        // Initial layout
-        window.switchTab = function (tabId) {
-            document.getElementById('panel-context').classList.toggle('hidden', tabId !== 'context');
-            document.getElementById('panel-history').classList.toggle('hidden', tabId !== 'history');
-            document.getElementById('tab-btn-context').classList.toggle('active', tabId === 'context');
-            document.getElementById('tab-btn-history').classList.toggle('active', tabId === 'history');
-        };
 
         let panZoom;
         let lastScenarioId = null;

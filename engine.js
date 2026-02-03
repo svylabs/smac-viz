@@ -7,9 +7,11 @@ class VisualizerEngine {
     constructor() {
         this.config = null;
         this.currentStateId = null;
+        this.previousStateId = null;
         this.context = {};
         this.history = [];
         this.listeners = [];
+        this.lastEventId = null;
     }
 
     /**
@@ -25,6 +27,8 @@ class VisualizerEngine {
         this.config = config;
         this.context = JSON.parse(JSON.stringify(config.context || {}));
         this.currentStateId = config.initialState;
+        this.previousStateId = null;
+        this.lastEventId = null;
         this.history = [];
         this.recordHistory('Initial State');
         this.notify();
@@ -73,7 +77,9 @@ class VisualizerEngine {
         }
 
         // Move to next state
+        this.previousStateId = this.currentStateId;
         this.currentStateId = transition.to;
+        this.lastEventId = eventId;
         this.recordHistory(eventId, input);
         this.notify();
         return true;
@@ -95,32 +101,46 @@ class VisualizerEngine {
     generateMermaid() {
         if (!this.config) return '';
 
-        let m = 'stateDiagram-v2\n';
-        m += '    direction LR\n\n';
+        let m = 'flowchart LR\n';
 
         // Styling
-        m += '    classDef current fill:#6366f1,stroke:#fff,stroke-width:2px,color:#fff\n\n';
+        m += '    classDef current fill:#6366f1,stroke:#fff,stroke-width:2px,color:#fff\n';
+        m += '    classDef previous fill:#10b981,stroke:#fff,stroke-width:1px,color:#fff\n\n';
 
         // States
         Object.entries(this.config.states).forEach(([id, data]) => {
             const label = data.label || id;
-            m += `    state "${label}" as ${id}\n`;
+            m += `    ${id}("${label}")\n`;
             if (id === this.currentStateId) {
                 m += `    class ${id} current\n`;
+            } else if (id === this.previousStateId) {
+                m += `    class ${id} previous\n`;
             }
         });
 
         m += '\n';
 
         // Transitions
+        let edgeIndex = 0;
+        let activeEdgeIndex = -1;
+
         Object.entries(this.config.states).forEach(([sourceId, stateData]) => {
             if (stateData.on) {
                 Object.entries(stateData.on).forEach(([eventId, trans]) => {
                     const label = trans.label || eventId;
-                    m += `    ${sourceId} --> ${trans.to}: ${label}\n`;
+                    m += `    ${sourceId} -->|"${label}"| ${trans.to}\n`;
+
+                    if (sourceId === this.previousStateId && eventId === this.lastEventId) {
+                        activeEdgeIndex = edgeIndex;
+                    }
+                    edgeIndex++;
                 });
             }
         });
+
+        if (activeEdgeIndex !== -1) {
+            m += `    linkStyle ${activeEdgeIndex} stroke:#6366f1,stroke-width:4px,color:#6366f1\n`;
+        }
 
         return m;
     }
@@ -147,10 +167,16 @@ class VisualizerEngine {
         if (this.history.length <= 1) return; // Can't undo initial state
 
         this.history.pop(); // Remove current state
-        const prevState = this.history[this.history.length - 1];
+        const restored = this.history[this.history.length - 1];
 
-        this.currentStateId = prevState.state;
-        this.context = JSON.parse(JSON.stringify(prevState.context));
+        this.currentStateId = restored.state;
+        this.context = JSON.parse(JSON.stringify(restored.context));
+        this.lastEventId = restored.event === 'Initial State' ? null : restored.event;
+
+        // Recover previous state if history allows
+        this.previousStateId = this.history.length > 1
+            ? this.history[this.history.length - 2].state
+            : null;
 
         console.log("VisualizerEngine: Undo to", this.currentStateId);
         this.notify();
