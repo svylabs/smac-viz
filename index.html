@@ -30,7 +30,7 @@
             <div class="sidebar-tabs">
                 <button class="tab-btn active" onclick="switchMainTab('code')">Code</button>
                 <button class="tab-btn" onclick="switchMainTab('sim')">Simulator</button>
-                <button class="tab-btn" onclick="switchMainTab('hist')">History</button>
+                <button class="tab-btn" onclick="switchMainTab('test')">Tests</button>
             </div>
 
             <div class="sidebar-content">
@@ -43,6 +43,8 @@
                             <button id="btn-apply-json" class="btn-mini"
                                 style="flex: 1; background: var(--success); border: none; color: white;">Apply</button>
                             <button id="btn-reset-json" class="btn-mini" style="flex: 1;">Reset</button>
+                            <button id="btn-share-json" class="btn-mini"
+                                style="flex: 1; background: var(--brand); color: white; border: none;">Copy URL</button>
                         </div>
                     </div>
                     <div id="editor-container"
@@ -59,8 +61,11 @@
                                 <h2 id="current-state-label">Loading...</h2>
                             </div>
                             <div style="display: flex; gap: 8px;">
+                                <button id="btn-save-test" class="btn-mini"
+                                    style="background: var(--brand); color: white; border: none;"
+                                    title="Save as Test">💾</button>
                                 <button onclick="engine.undo()" class="btn-mini" title="Undo Last Step">↩️</button>
-                                <button id="btn-replay" class="btn-mini" title="Replay Sequence">▶️</button>
+                                <button id="btn-replay" class="btn-mini" title="Replay History">▶️</button>
                             </div>
                         </div>
                         <p id="current-state-desc"
@@ -98,13 +103,19 @@
                     </div>
                 </div>
 
-                <!-- History Tab -->
-                <div id="tab-hist" class="tab-pane">
+
+                <!-- Tests Tab -->
+                <div id="tab-test" class="tab-pane">
                     <div class="pane-header">
-                        <span class="subtitle">Simulation Log</span>
-                        <h2>Event History</h2>
+                        <span class="subtitle">Stored Simulations</span>
+                        <h2>Saved Tests</h2>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">
+                            Replay previous simulation sessions.
+                        </p>
                     </div>
-                    <div id="history-log" class="history-list"></div>
+                    <div id="test-list" class="test-list">
+                        <!-- Tests injected here -->
+                    </div>
                 </div>
             </div>
         </aside>
@@ -136,6 +147,7 @@
 
     <script type="module">
         import { VisualizerEngine } from './engine.js';
+        import { TestManager } from './storage.js';
 
         const engine = new VisualizerEngine();
         window.engine = engine;
@@ -226,17 +238,36 @@
             if (tabId === 'code' && editor) {
                 setTimeout(() => editor.layout(), 10);
             }
+            if (tabId === 'test') {
+                renderTests();
+            }
         };
 
         async function loadInitialConfig() {
             try {
+                // Check for 'code' query param first
+                const params = new URLSearchParams(window.location.search);
+                const encodedCode = params.get('code');
+
+                if (encodedCode) {
+                    try {
+                        const decoded = decodeURIComponent(escape(atob(encodedCode)));
+                        const config = JSON.parse(decoded);
+                        editor.setValue(JSON.stringify(config, null, 2));
+                        applyJsonConfig();
+                        return;
+                    } catch (e) {
+                        console.error("Failed to decode code from URL:", e);
+                    }
+                }
+
                 const resp = await fetch(DEFAULT_URL);
                 if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
                 const config = await resp.json();
                 editor.setValue(JSON.stringify(config, null, 2));
                 applyJsonConfig();
             } catch (err) {
-                showError("Failed to load default config: " + err.message);
+                showError("Failed to load configuration: " + err.message);
             }
         }
 
@@ -263,6 +294,47 @@
 
         document.getElementById('btn-apply-json').onclick = applyJsonConfig;
         document.getElementById('btn-reset-json').onclick = loadInitialConfig;
+        document.getElementById('btn-share-json').onclick = async () => {
+            try {
+                const content = editor.getValue();
+                const encoded = btoa(unescape(encodeURIComponent(content)));
+                const url = new URL(window.location.href);
+                url.searchParams.set('code', encoded);
+
+                await navigator.clipboard.writeText(url.toString());
+
+                const btn = document.getElementById('btn-share-json');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.style.background = '#0ea5e9';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'var(--brand)';
+                }, 2000);
+            } catch (err) {
+                alert("Failed to copy URL: " + err.message);
+            }
+        };
+
+        document.getElementById('btn-save-test').onclick = () => {
+            if (engine.history.length <= 1) {
+                alert("Simulation history is empty. Perform some actions first!");
+                return;
+            }
+
+            const testData = {
+                configId: engine.config.id,
+                initialContext: engine.config.context || {},
+                transitions: engine.history.slice(1).map(h => ({
+                    event: h.event,
+                    input: h.input
+                }))
+            };
+
+            const newTest = TestManager.saveTest(testData);
+            alert(`Test "${newTest.name}" saved!`);
+            renderTests();
+        };
         document.getElementById('btn-hide-error').onclick = () => {
             document.getElementById('error-overlay').style.display = 'none';
         };
@@ -325,18 +397,6 @@
             document.getElementById('current-state-label').textContent = state.data?.label || state.id;
             document.getElementById('current-state-desc').textContent = state.data?.description || '';
             document.getElementById('state-json').textContent = JSON.stringify(state.context, null, 2);
-
-            // Update History
-            const historyLog = document.getElementById('history-log');
-            if (historyLog) {
-                historyLog.innerHTML = state.history.slice().reverse().map(h => `
-                    <div class="history-item">
-                        <span class="time">${h.timestamp}</span>
-                        <span class="event">${h.event}</span>
-                        <div style="font-size: 0.7rem; opacity: 0.6;">To: ${h.state}</div>
-                    </div>
-                `).join('');
-            }
 
             // Update Mermaid
             try {
@@ -523,6 +583,86 @@
             } else {
                 document.getElementById('replay-remaining').textContent = `${replayQueue.length} steps remaining`;
             }
+        };
+
+        // Test Management Functions
+        window.renderTests = function () {
+            const root = document.getElementById('test-list');
+            const tests = TestManager.getTests();
+
+            if (tests.length === 0) {
+                root.innerHTML = '<div class="empty-state">No saved tests yet. Save a simulation from the Simulator tab.</div>';
+                return;
+            }
+
+            root.innerHTML = tests.map(test => `
+                <div class="test-item" id="test-${test.id}">
+                    <div class="test-header">
+                        <div class="test-name-container">
+                            <input type="text" class="test-name-input" value="${test.name}" 
+                                   onblur="updateTestName('${test.id}', this.value)"
+                                   onkeydown="if(event.key==='Enter') this.blur()">
+                            <div class="test-date">Created ${new Date(test.createdAt).toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <div class="test-meta">
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">
+                            ${test.transitions.length} steps • ${test.configId}
+                        </div>
+                        <div class="test-actions">
+                            <button class="btn-test-run" onclick="runTest('${test.id}')">Simulate</button>
+                            <button class="btn-test-delete" onclick="deleteTest('${test.id}')">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        window.updateTestName = function (id, name) {
+            TestManager.updateTest(id, { name });
+        };
+
+        window.deleteTest = function (id) {
+            if (confirm("Are you sure you want to delete this test?")) {
+                TestManager.deleteTest(id);
+                renderTests();
+            }
+        };
+
+        window.runTest = function (id) {
+            const tests = TestManager.getTests();
+            const test = tests.find(t => t.id === id);
+            if (!test) return;
+
+            // Check if config matches
+            if (engine.config.id !== test.configId) {
+                if (!confirm(`Warning: This test was created for config "${test.configId}", but current config is "${engine.config.id}". Run anyway?`)) {
+                    return;
+                }
+            }
+
+            // Switch to simulator tab
+            switchMainTab('sim');
+
+            // Setup replay queue
+            replayQueue = [...test.transitions];
+
+            // Reset engine with original context if possible, otherwise current's initial
+            // Note: the request said "store the initial context". 
+            // We should ideally reset the engine to its initial state before replaying.
+            engine.reset();
+
+            // If the test has its own initial context, we should apply it.
+            // Currently engine.load() sets context from config.context.
+            // We might need to manually override context after reset if we want EXACT replay of THAT test's start.
+            if (test.initialContext) {
+                engine.context = JSON.parse(JSON.stringify(test.initialContext));
+                engine.notify();
+            }
+
+            document.getElementById('replay-controls').style.display = 'block';
+            document.getElementById('controls-root').style.display = 'none';
+            document.getElementById('replay-remaining').textContent = `${replayQueue.length} steps remaining`;
         };
     </script>
 </body>

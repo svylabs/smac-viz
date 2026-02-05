@@ -16,6 +16,7 @@
     "svg-pan-zoom": "^3.6.2"
   },
   "devDependencies": {
+    "gh-pages": "^6.3.0",
     "vite": "^6.0.0"
   }
 }

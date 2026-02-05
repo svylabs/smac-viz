@@ -13,8 +13,8 @@
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
-  <script type="module" crossorigin src="/smac-viz/assets/index-CBpxEwYC.js"></script>
-  <link rel="stylesheet" crossorigin href="/smac-viz/assets/index-8tGiFTB2.css">
+  <script type="module" crossorigin src="/smac-viz/assets/index-B2UQtIQu.js"></script>
+  <link rel="stylesheet" crossorigin href="/smac-viz/assets/index-8RlFwa1o.css">
 </head>
 
 <body>
@@ -31,7 +31,7 @@
             <div class="sidebar-tabs">
                 <button class="tab-btn active" onclick="switchMainTab('code')">Code</button>
                 <button class="tab-btn" onclick="switchMainTab('sim')">Simulator</button>
-                <button class="tab-btn" onclick="switchMainTab('hist')">History</button>
+                <button class="tab-btn" onclick="switchMainTab('test')">Tests</button>
             </div>
 
             <div class="sidebar-content">
@@ -44,6 +44,8 @@
                             <button id="btn-apply-json" class="btn-mini"
                                 style="flex: 1; background: var(--success); border: none; color: white;">Apply</button>
                             <button id="btn-reset-json" class="btn-mini" style="flex: 1;">Reset</button>
+                            <button id="btn-share-json" class="btn-mini"
+                                style="flex: 1; background: var(--brand); color: white; border: none;">Copy URL</button>
                         </div>
                     </div>
                     <div id="editor-container"
@@ -60,8 +62,11 @@
                                 <h2 id="current-state-label">Loading...</h2>
                             </div>
                             <div style="display: flex; gap: 8px;">
+                                <button id="btn-save-test" class="btn-mini"
+                                    style="background: var(--brand); color: white; border: none;"
+                                    title="Save as Test">💾</button>
                                 <button onclick="engine.undo()" class="btn-mini" title="Undo Last Step">↩️</button>
-                                <button id="btn-replay" class="btn-mini" title="Replay Sequence">▶️</button>
+                                <button id="btn-replay" class="btn-mini" title="Replay History">▶️</button>
                             </div>
                         </div>
                         <p id="current-state-desc"
@@ -99,13 +104,19 @@
                     </div>
                 </div>
 
-                <!-- History Tab -->
-                <div id="tab-hist" class="tab-pane">
+
+                <!-- Tests Tab -->
+                <div id="tab-test" class="tab-pane">
                     <div class="pane-header">
-                        <span class="subtitle">Simulation Log</span>
-                        <h2>Event History</h2>
+                        <span class="subtitle">Stored Simulations</span>
+                        <h2>Saved Tests</h2>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">
+                            Replay previous simulation sessions.
+                        </p>
                     </div>
-                    <div id="history-log" class="history-list"></div>
+                    <div id="test-list" class="test-list">
+                        <!-- Tests injected here -->
+                    </div>
                 </div>
             </div>
         </aside>
