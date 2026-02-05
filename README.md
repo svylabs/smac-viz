@@ -1,8 +1,8 @@
-# smac-viz | State Machine Visualizer
+# smacthat | State Machine Visualizer
 
-`smac-viz` is a standalone, browser-based tool for visualizing and simulating state machines defined in JSON. It uses **Mermaid.js** for diagram generation and **Monaco Editor** for real-time JSON editing.
+`smacthat` is a standalone, browser-based tool for visualizing and simulating state machines defined in JSON. It uses **Mermaid.js** for diagram generation and **Monaco Editor** for real-time JSON editing.
 
-![smac-viz Preview](https://raw.githubusercontent.com/mermaid-js/mermaid/develop/docs/public/img/state.png) *(Placeholder image, replace with your actual screenshot)*
+![smacthat Preview](https://raw.githubusercontent.com/mermaid-js/mermaid/develop/docs/public/img/state.png) *(Placeholder image, replace with your actual screenshot)*
 
 ## Features
 
